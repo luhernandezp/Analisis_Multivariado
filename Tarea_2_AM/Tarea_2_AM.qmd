@@ -1,0 +1,253 @@
+---
+lang: es
+format:
+  pdf:
+    documentclass: article
+    include-in-header:
+      - file: preamble.tex
+execute:
+  cache: true
+---
+
+\pagenumbering{gobble}
+\begin{titlepage}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for the horizontal lines
+\center
+
+\begin{minipage}{13.5cm}
+\center
+\includegraphics[width=3cm,height=4cm]{logo}\\[0.5cm] % Logo
+
+\textsc{\Large UNIVERSIDAD NACIONAL DE COLOMBIA \\[1.0cm]
+{\large MAESTRÍA EN CIENCIAS ESTADÍSTICA\\[0.5cm]
+Departamento de Estadística\\[0.2cm]
+Facultad de Ciencias}}\\[2cm]
+
+\rule[1.7mm]{0.3cm}{0.5mm}
+\hfill
+\textsc{\Large Análisis Multivariado de Datos}
+\hfill
+\rule[1.7mm]{0.3cm}{0.5mm}
+\\[0.2cm]
+
+
+
+\rule{\linewidth}{0.5mm}\\[1.5cm]
+
+{\large \textbf{Integrantes}:\\[0.3cm]
+\begin{tabular}{cc}
+Luis David Hernández Pérez & C.C. 1193549963 \\
+\end{tabular}
+}\\[2.5cm]
+
+{\large
+Medellín, Colombia \\
+Semestre 2024-02
+}\\[0.3cm]
+
+{\large
+Medellín, Diciembre 24 de 2024
+}
+\end{minipage}
+\vfill
+\end{titlepage}
+\pagenumbering{arabic}
+
+
+
+\tableofcontents
+\newpage
+
+
+
+
+# Punto-01:
+
+Considere la matriz de datos asignada, la cual corresponde a un conjunto de datos simulados de un vector $\mathbf{x}$ normal 6-variado con parámetros dados por:
+
+$$
+\boldsymbol{\mu} = 
+\begin{bmatrix}
+\mu_1 \\
+\mu_2 \\
+\mu_3 \\
+\mu_4 \\
+\mu_5 \\
+\mu_6
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 \\
+0 \\
+0 \\
+0 \\
+0 \\
+0
+\end{bmatrix}, \quad
+\boldsymbol{\Sigma} = 
+\begin{bmatrix}
+4 & 0 & 2 & 0 & 1 & 0 \\
+0 & 9 & 0 & 3 & 0 & 2 \\
+2 & 0 & 5 & 0 & 4 & 0 \\
+0 & 3 & 0 & 8 & 0 & 1 \\
+1 & 0 & 4 & 0 & 6 & 0 \\
+0 & 2 & 0 & 1 & 0 & 7
+\end{bmatrix}
+$$
+
+Particione $\mathbf{x}$ como sigue:
+
+$$
+\mathbf{x} = 
+\begin{bmatrix}
+\mathbf{x}^{(1)} \\
+\mathbf{x}^{(2)}
+\end{bmatrix},
+\quad \text{donde:} \quad
+\mathbf{x}^{(1)} = 
+\begin{bmatrix}
+X_1 \\
+X_2 \\
+X_3
+\end{bmatrix}, \quad
+\mathbf{x}^{(2)} = 
+\begin{bmatrix}
+X_4 \\
+X_5 \\
+X_6
+\end{bmatrix}
+$$
+
+\begin{enumerate}[label=(\alph*)]
+    \item Realice una verificación de la normalidad: uni-variada, bi-variada y 3-variada de los datos asociados a $\mathbf{x}^{(1)}$. \\
+    
+\textbf{Nota:} Utilizar algunas de las herramientas vistas en clase sobre procesos de evaluación de la normalidad multivariada y/o herramientas que usted conozca para dichos procesos.
+    
+\item ¿Cuáles son los estimadores de Máxima Verosimilitud de $\boldsymbol{\mu}^{(1)} = \mathbb{E}[\mathbf{x}^{(1)}]$ y de $\boldsymbol{\Sigma}_{11} = \mathrm{Var}(\mathbf{x}^{(1)})$?
+
+  \item Considere la variable definida por $Y = \mathbf{a}^T \mathbf{x}^{(2)}$, con $\mathbf{a} = 
+    \begin{bmatrix}
+    1 & 2 & -1
+    \end{bmatrix}^T$:
+    \begin{itemize}
+        \item Obtenga los datos muéstrales (o puntuaciones) asociados a la variable $Y$.
+        \item Realice la verificación de normalidad uni-variada de los datos asociados a $Y$.
+    \end{itemize}
+
+  \item Considere el vector definido por $\mathbf{y} = \mathbf{A} \mathbf{x}^{(1)}$, con $\mathbf{A} = 
+    \begin{bmatrix}
+    0 & 1 & 2 \\
+    2 & 0 & -1
+    \end{bmatrix}$:
+    \begin{itemize}
+        \item Obtenga los datos muestrales (o puntuaciones) asociados al vector $\mathbf{y}$.
+        \item Realice la verificación de normalidad bi-variada de los datos asociados a $\mathbf{y}$.
+    \end{itemize}
+\end{enumerate}
+
+
+
+<!-------------------------------- Punto 2 ---------------------------------->
+
+
+
+
+# Punto-02:
+
+A partir de los dos conjuntos de datos asociados a $\mathbf{x}^{(1)}$ y $\mathbf{x}^{(2)}$, realice los siguientes puntos:
+
+\begin{enumerate}[label=(\alph*)]
+    \item Hallar $\boldsymbol{\mu}_{1 \vert 2} = \mathbb{E}[\mathbf{x}^{(1)} \mid \mathbf{x}^{(2)}]$.
+    
+  \item A partir de (a), ¿cuál es la matriz de coeficientes que resulta del ajuste de un Modelo de Regresión Lineal Multivariado (MRL-Multivariado) de $\mathbf{x}^{(1)}$ versus $\mathbf{x}^{(2)}$?
+    
+  \item Utilizando teoría de modelos lineales, ajuste el MRL-Multivariado de $\mathbf{x}^{(1)}$ versus $\mathbf{x}^{(2)}$. Compare los coeficientes de dicho modelo ajustado con los obtenidos en (b).
+\end{enumerate}
+
+
+
+
+
+
+
+<!------------------------------- Punto 3 ------------------------------------->
+
+
+# Punto-03:
+
+
+Para este punto, considere los dos conjuntos de datos asignados, los cuales corresponden a datos simulados de los vectores normales 3-variados independientes $\mathbf{x}_1$ y $\mathbf{x}_2$, con vector de medias y matriz de varianza-covarianza dados por:
+
+
+$$
+\boldsymbol{\mu} = 
+\begin{bmatrix}
+0 \\
+0 \\
+0
+\end{bmatrix}, \quad
+\boldsymbol{\Sigma} = 
+\begin{bmatrix}
+4 & 2 & 0 \\
+2 & 3 & 1 \\
+0 & 1 & 5
+\end{bmatrix}
+$$
+
+
+Es decir, los dos conjuntos de datos son simulaciones de los vectores:
+
+$$
+\mathbf{x}_1 \sim N_3(\boldsymbol{\mu}, \boldsymbol{\Sigma}), \quad \mathbf{x}_2 \sim N_3(\boldsymbol{\mu}, \boldsymbol{\Sigma}), \quad \text{Cov}(\mathbf{x}_1, \mathbf{x}_2) = \mathbf{O}_{3 \times 3}
+$$
+
+Considere las siguientes combinaciones lineales de $\mathbf{x}_1$ y $\mathbf{x}_2$:
+
+
+$$
+\mathbf{v}_1 = \mathbf{x}_1 + 2 \mathbf{x}_2, \quad \mathbf{v}_2 = 2 \mathbf{x}_1 - \mathbf{x}_2
+$$
+
+
+
+\begin{enumerate}[label=(\alph*)]
+    \item Obtenga los datos muéstrales (o puntuaciones) asociados a los vectores $\mathbf{v}_1$ y $\mathbf{v}_2$.
+
+  \item Realice la verificación de normalidad 3-variada de los datos asociados a $\mathbf{v}_1$. \\
+    \textbf{Nota:} Utilizar algunas de las herramientas vistas en clase sobre procesos de evaluación de la normalidad multivariada y/o herramientas que usted conozca para dichos procesos.
+
+  \item Realice la verificación de normalidad 6-variada de los datos asociados al vector:
+
+
+$$
+\mathbf{v} = 
+\begin{bmatrix}
+\mathbf{v}_1 \\
+\mathbf{v}_2
+\end{bmatrix}
+$$
+
+\textbf{Nota:} Utilizar algunas de las herramientas vistas en clase sobre procesos de evaluación de la normalidad multivariada y/o herramientas que usted conozca para dichos procesos.
+
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
