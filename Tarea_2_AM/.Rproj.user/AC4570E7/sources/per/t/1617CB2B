@@ -1,9 +1,9 @@
 {
     "id": "1617CB2B",
-    "path": "~/Tarea_2_AM/Tarea_2_AM.qmd",
+    "path": "~/GitHub/Analisis_Multivariado/Tarea_2_AM/Tarea_2_AM.qmd",
     "project_path": "Tarea_2_AM.qmd",
     "type": "quarto_markdown",
-    "hash": "1301001210",
+    "hash": "3397102160",
     "contents": "",
     "dirty": false,
     "created": 1736188482269.0,
@@ -16,16 +16,17 @@
         "Source": "Source",
         "docOutlineVisible": "1",
         "rmdVisualCollapsedChunks": "",
-        "rmdVisualModeLocation": "1485:1300",
-        "cursorPosition": "125,0",
-        "scrollLine": "106"
+        "rmdVisualModeLocation": "3963:2545.60009765625",
+        "cursorPosition": "39,30",
+        "scrollLine": "32",
+        "docOutlineSize": "120"
     },
     "folds": "",
-    "lastKnownWriteTime": 1737123897,
+    "lastKnownWriteTime": 1738384003,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1737123897043,
+    "last_content_update": 1738384003532,
     "read_only": false,
     "read_only_alternatives": []
 }

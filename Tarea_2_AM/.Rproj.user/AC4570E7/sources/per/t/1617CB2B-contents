@@ -37,6 +37,7 @@ Facultad de Ciencias}}\\[2cm]
 {\large \textbf{Integrantes}:\\[0.3cm]
 \begin{tabular}{cc}
 Luis David Hernández Pérez & C.C. 1193549963 \\
+Daniel Felipe Villa Rengifo & C.C. 1005087556 \\
 \end{tabular}
 }\\[2.5cm]
 
@@ -46,7 +47,7 @@ Semestre 2024-02
 }\\[0.3cm]
 
 {\large
-Medellín, Diciembre 24 de 2024
+Medellín, Enero 31 de 2025
 }
 \end{minipage}
 \vfill
@@ -60,6 +61,7 @@ Medellín, Diciembre 24 de 2024
 
 
 
+Los datos utilizados son los pertenecientes al equipo-07
 
 # Punto-01:
 
@@ -147,9 +149,243 @@ $$
 
 
 
-<!-------------------------------- Punto 2 ---------------------------------->
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(magrittr)
+library(MVN)
+library(mvnormtest)
+```
+
+\newpage
+
+## Solución Punto-01
 
 
+### Solución (a)
+
+```{r}
+datos_01_y_02 <- read.table("datos_puntos_01_02.txt", header = T)
+
+# Separar los conjuntos de datos
+
+x1 <- as.matrix(datos_01_y_02[, 1:3])  # Variables V1, V2, V3
+x2 <- as.matrix(datos_01_y_02[, 4:6])  # Variables V4, V5, V6
+
+```
+
+
+
+Primeramente verificaremos la normalidad uni-variada por medio de la prueba de Shapiro-Wilk a los datos asociados a $X^{(1)}$.
+
+```{r}
+# Normalidad uni-variada
+apply(x1, 2, function(col) shapiro.test(col))
+```
+
+
+Las pruebas de normalidad uni-variada para las variables $V_1$ , $V_2$ y $V_3$ no muestran evidencia suficiente para rechazar la hipótesis de normalidad. Por lo tanto, estas variables son consistentes con una distribución normal.
+
+\newpage
+
+```{r}
+# Normalidad bi-variada
+biv_pairs <- combn(1:3, 2, simplify = FALSE)
+for (pair in biv_pairs) {
+  cat(sprintf("Variables: V%d y V%d\n", pair[1], pair[2]))
+  print(mshapiro.test(t(x1[, pair])))
+}
+```
+
+
+Para los pares de variables analizados $(V1-V2, V1-V3, V2-V3)$, no hay
+evidencia suficiente para rechazar la hipótesis de normalidad. Por lo tanto, se
+considera que las combinaciones bi-variadas de $x(1)$ son consistentes con
+una distribución normal.
+
+
+
+
+Ahora verificaremos verificaremos la normalidad 3-variada de los datos asociados a $X^{(1)}$.
+
+
+
+```{r}
+# Normalidad 3-variada con el test de Mardia
+Mardia_x1 <- mvn(x1, mvnTest = "mardia")
+Mardia_x1$multivariateNormality
+```
+
+
+- Para la asimetría, el p-valor alto (0.5055) indica que no hay evidencia suficiente para
+rechazar la normalidad.
+
+- Para la curtosis, el p-valor alto (0.6841) también sugiere que los datos cumplen con la normalidad.
+
+- La conclusión general del test (MVN) confirma que los datos en $x(1)$ son consistentes con una distribución normal multivariada.
+
+
+### Solución (b)
+
+Los estimadores de maxima verosimilitud para
+
+
+$$
+\hat{\mu} = \underline{\bar{\mathbf{x}}}^{(1)} = 
+\begin{bmatrix}
+\overline{X}_1 \\
+\overline{X}_2 \\
+\overline{X}_3
+\end{bmatrix} = 
+\begin{bmatrix}
+0.06616429 \\
+-0.16939592 \\
+-0.34023163 
+\end{bmatrix} \ y \quad
+$$
+
+$$
+\hat{\Sigma}_{11} = S_n = \frac{1}{n} \sum_{i=1}^n \left(\underline{\mathbf{x}}^{(1)} - \underline{\bar{\mathbf{x}}}^{(1)}\right) \left(\underline{\mathbf{x}}^{(1)} - \underline{\bar{\mathbf{x}}}^{(1)}\right)' = \begin{bmatrix}
+4.369791 & -0.4407255 & 2.435705 \\
+-0.4407255 & 9.9162583 & -1.465279 \\
+2.4357049 & -1.4652786 & 5.628944
+\end{bmatrix}
+$$
+
+```{r}
+# Estimador de la media muestral (Máxima Verosimilitud de µ(1))
+mu_1_hat <- colMeans(x1)
+print(mu_1_hat)
+```
+
+```{r}
+# Estimador de la matriz de covarianza muestral (Máxima Verosimilitud de Σ11)
+sigma_11_hat <- cov(x1)
+print(sigma_11_hat)
+```
+
+
+
+### Solución (c)
+
+
+Se nos pide calcular los valores de la variable $Y$, definida por:
+
+$$
+\mathbf{Y} = \mathbf{a}^T \mathbf{x}^{(2)}, \quad con \quad
+\mathbf{a} = 
+    \begin{bmatrix}
+    1 & 2 & -1
+    \end{bmatrix}^T\quad y \quad
+\underline{\mathbf{x}}^{(2)} = 
+\begin{bmatrix}
+X_4 \\
+X_5 \\
+X_6
+\end{bmatrix}    
+$$    
+
+Haciendo el calculo tenemos lo siguiente
+
+
+```{r}
+x2_data <- as.matrix(datos_01_y_02[, c("V4", "V5", "V6")])
+
+# vector a
+a <- c(1, 2, -1)
+
+# Calcular los valores de Y
+y_values <- x2_data %*% a
+
+y_values[1:10,] # Primeras 10 obervaciones de los valores de Y
+```
+
+
+Ahora verifiquemos  la normalidad univariada a los valores asociados a $Y$.
+
+
+```{r}
+# Verificación de normalidad univariada con la prueba de Shapiro-Wilk
+shapiro.test(y_values)
+```
+Dado que el p-valor es 0.8698 que es significativamente mayor a 0.05, podriamos decir que los datos asociados a $Y$ podrían provenir de una distribución normal, lo cual es consistente con el supuesto de normalidad.
+
+
+### Solución (d)
+
+
+
+Se nos pide calcular los valores de la variable $Y$, definida por:
+
+
+$$
+\mathbf{Y} = \mathbf{A} \underline{\mathbf{x}}^{(1)}, \quad con \quad
+\mathbf{A} = 
+    \begin{bmatrix}
+    0 & 1 & 2 \\
+    2 & 0 & -1
+    \end{bmatrix} \quad y \quad
+\underline{\mathbf{x}}^{(1)} = 
+\begin{bmatrix}
+X_1 \\
+X_2 \\
+X_3
+\end{bmatrix} 
+$$
+
+
+Haciendo el calculo tenemos que
+
+
+```{r}
+# Seleccionar las columnas correspondientes a x(1) 
+x1_data <- as.matrix(datos_01_y_02[, c("V1", "V2", "V3")])
+
+# Definir la matriz A
+A <- matrix(c(0, 1, 2,2, 0, -1), 
+            nrow = 2, byrow = TRUE)
+
+# Calcular los valores de Y = A * x(1)
+y_values_d <- x1_data %*% t(A)
+
+
+# Primeras 10 filas de los valores de Y
+y_values_d[1:10, ] 
+```
+
+
+Ahora verifiquemos  la normalidad-bivariada a los valores asociados a $Y$.
+
+
+
+```{r}
+# Aplicar prueba de Mardia para normalidad bivariada
+mardia_test_d <- mvn(data = as.data.frame(y_values_d), 
+                   mvnTest = "mardia")
+
+mardia_test_d$multivariateNormality
+```
+
+
+
+- Para la asimetría, el p-valor alto (0.4052) indica que no hay evidencia suficiente para
+rechazar la normalidad.
+
+- Para la curtosis, el p-valor alto (0.8862) también sugiere que los datos cumplen con la normalidad.
+
+- La conclusión general del test (MVN) confirma que los datos asociados a $Y$ son consistentes con una distribución normal multivariada.
+
+
+
+
+
+
+
+<!-- Punto 02 -->
 
 
 # Punto-02:
@@ -168,9 +404,105 @@ A partir de los dos conjuntos de datos asociados a $\mathbf{x}^{(1)}$ y $\mathbf
 
 
 
+## Solución Punto-02:
 
 
-<!------------------------------- Punto 3 ------------------------------------->
+### Solución (a)
+
+
+
+Se nos pide hallar $\boldsymbol{\mu}_{1 \vert 2} = E[\underline{\mathbf{x}}^{(1)} \mid \underline{\mathbf{x}}^{(2)}]$
+
+
+Sabemos que
+
+$$
+\hat{\mu}_{1 \mid 2} = \underline{\hat{\mu}}^{(1)} + \hat{\Sigma}_{12} \hat{\Sigma}_{22}^{-1} \left(\underline{\mathbf{x}}^{(2)} - \underline{\hat{\mu}}^{(2)}\right) 
+$$
+Haciendo el calculo tenemos que
+
+
+```{r}
+# Separar los conjuntos de datos
+x1 <- as.matrix(datos_01_y_02[, 1:3])  # Variables V1, V2, V3
+x2 <- as.matrix(datos_01_y_02[, 4:6])  # Variables V4, V5, V6
+
+# Calcular las medias muestrales
+mu1 <- colMeans(x1)
+mu2 <- colMeans(x2)
+
+# Calcular matrices de covarianza
+S11 <- cov(x1)
+S22 <- cov(x2)
+S12 <- cov(x1, x2)
+S21 <- t(S12)
+
+# Cálculo de la media condicional: μ_{1|2} = E[x(1) | x(2)]
+mu_1_given_2 <- function(x2_val) {
+  mu1 + S12 %*% solve(S22) %*% (x2_val - mu2)
+}
+
+# Aplicar la función a los valores observados de x(2)
+est_mu_1_given_2 <- t(apply(x2, 1, mu_1_given_2))
+
+# Primeras 10 observaciones
+est_mu_1_given_2 %>% head(10)
+```
+
+
+
+
+### Solucion (b)
+
+
+```{r}
+# Matriz de coeficientes del modelo de regresión
+B_hat <- S12 %*% solve(S22)
+print(B_hat)
+```
+
+- Las filas de la matriz \(B\) representan las variables dependientes (\(V1, V2, V3\)).
+- Las columnas de la matriz \(B\) representan las variables independientes (\(V4, V5, V6\)).
+
+Los valores en la matriz \(B\) indican cómo cada variable independiente (\(V4, V5, V6\)) afecta, en promedio, a cada variable dependiente (\(V1, V2, V3\)).
+
+Por ejemplo:
+
+- El coeficiente $B_{(1, 4)} = -0.0587$ indica que un aumento de una unidad en \(V4\) disminuye \(V1\) en \(0.0587\) unidades, manteniendo constantes \(V5\) y \(V6\).
+
+El coeficiente $B_{(2, 5)} = -0.0775$ indica que un aumento de una unidad en \(V5\) disminuye \(V2\) en \(0.0775\) unidades, manteniendo constantes \(V4\) y \(V6\).
+
+- El coeficiente $B_{(3, 5)} = 0.6634$ muestra que \(V3\) aumenta considerablemente cuando \(V5\) incrementa en una unidad.
+
+
+### Solución (c)
+
+
+```{r}
+# Ajustar el modelo de regresión lineal multivariado
+modelo <- lm(cbind(V1, V2, V3) ~ V4 + V5 + V6, data = datos_01_y_02)
+
+# Coeficientes obtenidos del modelo ajustado
+coef_modelo <- coef(modelo)
+
+print(coef_modelo)
+```
+
+
+
+
+- La matriz \(B\) calculada coincide exactamente con los coeficientes del modelo ajustado.
+
+- Esto valida que los cálculos teóricos y el modelo ajustado son consistentes.
+
+
+Conclusión general
+
+La matriz \(B\) y los coeficientes del modelo ajustado confirman que las relaciones entre las variables independientes (\(V4, V5, V6\)) y las dependientes (\(V1, V2, V3\)) son adecuadamente modeladas por un modelo de regresión lineal multivariado.
+ 
+
+
+<!-- Punto 03 -->
 
 
 # Punto-03:
@@ -235,18 +567,100 @@ $$
 
 
 
+## Solución: Punto-03
+
+
+### Solución (a)
+
+
+Tenemos que 
+
+
+$$
+\mathbf{v}_1 = \mathbf{x}_1 + 2 \mathbf{x}_2, \quad y \quad \mathbf{v}_2 = 2 \mathbf{x}_1 - \mathbf{x}_2
+$$
+
+Haciendo los calculos tenemos que
+
+
+```{r}
+# cargando la muestras de datos de X(1) y X(2)
+x1_data_03 <- read.table("equipo_07_muestra1_datos_03.txt")
+x2_data_03 <- read.table("equipo_07_muestra2_datos_03.txt")
+
+
+# Calculando a V1 y V2
+v1 <- x1_data_03 + 2*x2_data_03
+v2 <- 2*x1_data_03 - x2_data_03
+```
+
+
+Ahora vizualicemos las primeras 10 observaciones asociadas a $\mathbf{v}_1$ y $\mathbf{v}_2$.
+
+
+```{r}
+v1 %>% head(10)
+```
+
+
+```{r}
+v2 %>% head(10)
+```
+
+
+### Solución (b)
+
+Verifiquemos la normalidad 3-variada de los datos asociados $\mathbf{v}_1$.
+
+
+
+```{r}
+# Aplicar prueba de Mardia para normalidad 3-variada
+mardia_test_v1 <- mvn(data = as.data.frame(v1), 
+                   mvnTest = "mardia")
+
+mardia_test_v1$multivariateNormality
+```
+
+
+- Para la asimetría, el p-valor alto (0.4153) indica que no hay evidencia suficiente para rechazar la normalidad.
+
+- Para la curtosis, el p-valor alto (0.2733) también sugiere que los datos cumplen con la normalidad.
+
+- La conclusión general del test (MVN) confirma que los datos asociados a $\mathbf{v}_1$ son consistentes con una distribución normal multivariada.
 
 
 
 
 
+### Solución (c)
 
 
+Veamos primeramente si $\underline{\mathbf{x}}_1$ y $\underline{\mathbf{x}}_2$ cumplen el supuesto de nomralidad 3-variada.
 
 
+```{r}
+mardia_test_x1 <- mvn(data = as.data.frame(x1_data_03), mvnTest = "mardia")
+mardia_test_x1$multivariateNormality
+```
 
 
+- Para la asimetría, el p-valor bajo (0.0.0240) indica que si hay evidencia suficiente para rechazar la normalidad.
 
+- Para la curtosis, el p-valor alto (0.3209) también sugiere que los datos cumplen con la normalidad.
+
+- La conclusión general del test (MVN) confirma que los datos asociados a $\underline{\mathbf{x}}_1$ no son consistentes con una distribución normal multivariada.
+
+
+```{r}
+mardia_test_x2 <- mvn(data = as.data.frame(x2_data_03), mvnTest = "mardia")
+mardia_test_x2$multivariateNormality
+```
+
+Con base en los resultados de la prueba de Mardia,no hay evidencia suficiente para rechazar la hipótesis de normalidad 3-variada. Por lo tanto, los datos asociados a $\mathbf{x}_2$ se ajustan a una distribución normal 3-variada.
+
+
+Dado que los datos asociados a $\mathbf{x}_1$ no se distribuyen normal 3-variando, por tanto los datos asociados al vector $\mathbf{v}$ que se compone de combinaciones lineales de $\mathbf{x}_1$ y $\mathbf{x}_2$ no cumpliran el supuesto de normalidad 6-variada.
 
 
 
