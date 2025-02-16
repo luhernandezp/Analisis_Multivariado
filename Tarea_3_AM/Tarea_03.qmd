@@ -1,0 +1,1778 @@
+---
+lang: es
+format: pdf
+editor: source
+
+execute:
+  cache: true
+  warning: false
+---
+
+<!-- Portada -->
+
+\pagenumbering{gobble}
+\begin{titlepage}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for the horizontal lines
+\center
+
+\begin{minipage}{13.5cm}
+\center
+\includegraphics[width=3cm,height=4cm]{logo}\\[0.5cm] % Logo
+
+\textsc{\Large UNIVERSIDAD NACIONAL DE COLOMBIA \\[1.0cm]
+{\large MAESTRÍA EN CIENCIAS ESTADÍSTICA\\[0.5cm]
+Departamento de Estadística\\[0.2cm]
+Facultad de Ciencias}}\\[2cm]
+
+\rule[1.7mm]{0.3cm}{0.5mm}
+\hfill
+\textsc{\Large Análisis Multivariado de Datos}
+\hfill
+\rule[1.7mm]{0.3cm}{0.5mm}
+\\[0.2cm]
+
+
+
+\rule{\linewidth}{0.5mm}\\[1.5cm]
+
+{\large \textbf{Integrantes}:\\[0.3cm]
+\begin{tabular}{cc}
+Luis David Hernández Pérez & C.C. 1193549963 \\
+Daniel Felipe Villa Rengifo & C.C. 1005087556 \\
+\end{tabular}
+}\\[2.5cm]
+
+{\large
+Medellín, Colombia \\
+Semestre 2024-02
+}\\[0.3cm]
+
+{\large
+Medellín, Febrero 15 de 2025
+}
+\end{minipage}
+\vfill
+\end{titlepage}
+\pagenumbering{arabic}
+\tableofcontents
+\newpage
+
+<!-- ================================================================== -->
+
+```{r}
+#| echo: false
+
+#######################################################
+#######      Resumenes descriptivos varios ############
+#######################################################
+
+asimetria=function(x) {
+  m3=mean((x-mean(x))^3)
+  skew=m3/(sd(x)^3)
+  skew}
+
+#### obtencion del coeficiente de curtosis muestral
+
+kurtosis=function(x) {
+  m4=mean((x-mean(x))^4)
+  kurt=m4/(sd(x)^4)
+  kurt}
+
+###########################################
+#### Scatterplot con Histogramas paralelos
+
+scatterhist = function(x, y, xlab="", ylab=""){
+  zones=matrix(c(2,0,1,3), ncol=2, byrow=TRUE)
+  layout(zones, widths=c(4/5,1/5), heights=c(1/5,4/5))
+  xhist = hist(x, plot=FALSE)
+  yhist = hist(y, plot=FALSE)
+  top = max(c(xhist$counts, yhist$counts))
+  par(mar=c(3,3,1,1))
+  plot(x,y)
+  par(mar=c(0,3,1,1))
+  barplot(xhist$counts, axes=FALSE, ylim=c(0, top), space=0)
+  par(mar=c(3,0,1,1))
+  barplot(yhist$counts, axes=FALSE, xlim=c(0, top), space=0, horiz=TRUE)
+  par(oma=c(3,3,0,0))
+  mtext(xlab, side=1, line=1, outer=TRUE, adj=0,
+        at=.8 * (mean(x) - min(x))/(max(x)-min(x)))
+  mtext(ylab, side=2, line=1, outer=TRUE, adj=0,
+        at=(.8 * (mean(y) - min(y))/(max(y) - min(y))))
+}
+
+##########################################################
+#### Función para Gráfico de perfiles para cada variable
+
+makeProfilePlot <- function(mylist,names)
+{
+  require(RColorBrewer)
+  # find out how many variables we want to include
+  numvariables <- length(mylist)
+  # choose 'numvariables' random colours
+  colours <- brewer.pal(numvariables,"Set1")
+  # find out the minimum and maximum values of the variables:
+  mymin <- 1e+20
+  mymax <- 1e-20
+  for (i in 1:numvariables)
+  {
+    vectori <- mylist[[i]]
+    mini <- min(vectori)
+    maxi <- max(vectori)
+    if (mini < mymin) { mymin <- mini }
+    if (maxi > mymax) { mymax <- maxi }
+  }
+  # plot the variables
+  for (i in 1:numvariables)
+  {
+    vectori <- mylist[[i]]
+    namei <- names[i]
+    colouri <- colours[i]
+    if (i == 1) { plot(vectori,col=colouri,type="l",ylim=c(mymin,mymax)) }
+    else         { points(vectori, col=colouri,type="l")                                     }
+    lastxval <- length(vectori)
+    lastyval <- vectori[length(vectori)]
+    text((lastxval-10),(lastyval),namei,col="black",cex=0.6)
+  }
+}
+
+
+##############################################################
+#### Setup of a Correlation Lower Panel in Scatterplot Matrix
+
+myPanel.hist <- function(x, ...){
+  usr <- par("usr")
+  on.exit(par(usr))
+  # Para definir región de graficiación
+  par(usr = c(usr[1:2], 0, 1.5) )
+  # Para obtener una lista que guarde las marcas de clase y conteos en cada una:
+  h <- hist(x, plot = FALSE)
+  breaks <- h$breaks;
+  nB <- length(breaks)
+  y <- h$counts; y <- y/max(y)
+  # Para dibujar los histogramas
+  rect(breaks[-nB], 0, breaks[-1], y, col="cyan", ...)
+}
+
+###############################################################
+#### Setup of a Boxplot Diagonal Panel in Scatterplot Matrix
+
+myPanel.box <- function(x, ...){
+  usr <- par("usr", bty = 'n')
+  on.exit(par(usr))
+  par(usr = c(-1, 1, min(x) - 0.5, max(x) + 0.5))
+  b <- boxplot(x, plot = F)
+  whisker.i <- b$stats[1,]
+  whisker.s <- b$stats[5,]
+  hinge.i <- b$stats[2,]
+  mediana <- b$stats[3,]
+  hinge.s <- b$stats[4,]
+  rect(-0.5, hinge.i, 0.5, mediana, col = 'gray')
+  segments(0, hinge.i, 0, whisker.i, lty = 2)
+  segments(-0.1, whisker.i, 0.1, whisker.i)
+  rect(-0.5, mediana, 0.5, hinge.s, col = 'gray')
+  segments(0, hinge.s, 0, whisker.s, lty = 2)
+  segments(-0.1, whisker.s, 0.1, whisker.s)
+}
+
+
+##############################################################
+#### Setup of a Correlation Lower Panel in Scatterplot Matrix
+
+myPanel.cor <- function(x, y, digits = 2, prefix = "", cex.cor){
+  usr <- par("usr")
+  on.exit(par(usr = usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- cor(x, y)
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste(prefix, txt, sep = "")
+  if(missing(cex.cor))
+    cex = 0.4/strwidth(txt)
+  text(0.5, 0.5, txt, cex = 1 + 1.5*abs(r))
+}
+
+# QQ-plot with Shapiro-Wilk normal test
+QQnorm <- function(datos){
+    lab.plot <- "Normal Q-Q Plot of Datos Crudos"
+  shapiro <- shapiro.test(datos)
+  shapvalue <- ifelse(shapiro$p.value < 0.001,
+      "P value < 0.001", paste("P value = ",
+        round(shapiro$p.value, 4), sep = ""))
+  shapstat <- paste("W = ", round(shapiro$statistic, 4),
+                    sep = "")
+  q <- qqnorm(datos, plot.it = FALSE)
+  qqnorm(datos, main = lab.plot)
+  qqline(datos, lty = 1, col = 2)
+  text(min(q$x, na.rm = TRUE), max(q$y,
+      na.rm = TRUE)*0.95, pos = 4,
+      'Shapiro-Wilk Test', col = "blue", font = 2)
+  text(min(q$x, na.rm = TRUE), max(q$y,
+      na.rm = TRUE)*0.80, pos = 4, shapstat,
+      col = "blue", font = 3)
+  text(min(q$x, na.rm = TRUE), max(q$y, na.rm = TRUE)*0.65,
+       pos = 4, shapvalue, col = "blue", font = 3)
+}
+
+###################################################################
+#### QQ-plot with Shapiro-Wilk normal test (datos transformados)
+
+QQnorm_transf <- function(datos){
+  lab.plot <- "Normal Q-Q Plot of Datos Transformados"
+  shapiro <- shapiro.test(datos)
+
+  shapvalue <- ifelse(shapiro$p.value < 0.001,
+          "P value < 0.001", paste("P value = ",
+          round(shapiro$p.value, 4), sep = ""))
+
+  shapstat <- paste("W = ", round(shapiro$statistic, 4),
+                    sep = "")
+
+  q <- qqnorm(datos, plot.it = FALSE)
+  qqnorm(datos, main = lab.plot)
+  qqline(datos, lty = 2, col = 2)
+
+  text(min(q$x, na.rm = TRUE),
+       max(q$y-0.2, na.rm = TRUE)*0.95, pos = 4,
+       'Shapiro-Wilk Test', col = "blue", font = 2)
+
+  text(min(q$x, na.rm = TRUE),
+       max(q$y-0.7, na.rm = TRUE)*0.80, pos = 4,
+       shapstat, col = "blue", font = 3)
+
+  text(min(q$x, na.rm = TRUE),
+       max(q$y-1.5, na.rm = TRUE)*0.65, pos = 4,
+       shapvalue, col = "blue", font = 3)
+}
+
+
+##############################################
+###### coeficiente de asimetría
+
+asimetria=function(x) {
+  m3=mean((x-mean(x))^3)
+  skew=m3/(sd(x)^3)
+  skew}
+
+#############################################
+###### Coeficiente de Kurtosis
+kurtosis=function(x) {
+  m4=mean((x-mean(x))^4)
+  kurt=m4/(sd(x)^4)
+  kurt}
+
+
+######################################################
+###### Función para Resumen descriptivo por grupos
+
+resumen_xgrupos <- function(misdatos,grupos)
+{
+  # se hallan los nombres de las variables
+  nombres_misdatos <- c(names(grupos),names(as.data.frame(misdatos)))
+  # se halla la media dentro de cada grupo
+  grupos <- grupos[,1] # nos aseguramos de que la var grupos no sea una lista
+  medias <- aggregate(as.matrix(misdatos) ~ grupos, FUN = mean)
+  names(medias) <- nombres_misdatos
+  # se hallan las desv-estandar dentro de cada grupos:
+  sds <- aggregate(as.matrix(misdatos) ~ grupos, FUN = sd)
+  names(sds) <- nombres_misdatos
+  # se hallan las varianzas dentro de cada grupos:
+  varianzas <- aggregate(as.matrix(misdatos) ~ grupos, FUN = var)
+  names(varianzas) <- nombres_misdatos
+  # se hallan las medianas dentro de cada grupos:
+  medianas <- aggregate(as.matrix(misdatos) ~ grupos, FUN = median)
+  names(medianas) <- nombres_misdatos
+  # se hallan los tama?os muestrales de cada grupo:
+  tamanos_n <- aggregate(as.matrix(misdatos) ~ grupos, FUN = length)
+  names(tamanos_n) <- nombres_misdatos
+  list(Medias=medias,Desviaciones_Estandar=sds,
+       Varianzas=varianzas, Medianas=medianas,
+       Tamanos_Muestrales=tamanos_n)
+}
+
+##################################################
+##################################################
+#########           PH-AM               ##########
+##################################################
+##################################################
+
+##################################################
+#### PH Sobre Igualdad de Matrices de Var-Cov ####
+##################################################
+
+########################################################
+### Función creada para la Prueba M-Box de Matrices 
+### de Var-Cov, ie. para Sigam_1=SIgma_2, pob. Normal
+
+prueba_M_Box2=function(x,y,alfa){
+  g<-2
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  s1=var(x);s2=var(y)
+  v<-n+m-2
+  sp<-( (n-1)*s1+(m-1)*s2 )/v
+  M<-v*log( det(sp) )-( (n-1)*log( det(s1) ) + (m-1)*log( det(s2) ) )
+  u<-( ( 1/(n-1) ) + ( 1/(m-1) ) - (1/v) )*( (2*p^2 + 3*p - 1)/(6*(p+1)*(g-1)) )
+  c<-(1-u)*M
+  df=( p*(p+1)*(g-1) )/2  # Grados de liber del num de la chi-cuadrado
+  chi_tabla=qchisq(1-alfa,df) # Valor crítico de la chi o Chi-de la tabla
+  valor_p=1-pchisq(c,df)  # valor-p de la prueba
+  resultados=data.frame(M=M,U=u,C=c,df=df,Chi_Tabla=chi_tabla,Valor_p=valor_p)
+  format(resultados, digits = 6)
+}
+
+
+##################################################
+#### PH Sobre Igualdad de Vectores de Medias  ####
+##################################################
+
+########################################################
+#### Función creada para la prueba de igualdad de medias, 
+#### ie. para: mu_1-mu_2=mu_0, sigmas iguales, pob. Normal
+
+HT2_sigmas_iguales=function(x,y,mu_0,alfa){
+  mux=apply(x,2,mean);muy=apply(y,2,mean)
+  sx<-var(x);sy<-var(y)
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  df1=p;df2<-n+m-p-1 # Grados de libertad del num y denom de la F
+  sp<-( (n-1)*sx + (m-1)*sy )/(n+m-2)
+  T_2<-( (n*m)/(n+m) )*t(mux-muy-mu_0)%*%solve(sp)%*%(mux-muy-mu_0)
+  k<-( (n+m-2)*p )/(n+m-p-1)
+  F0<-(1/k)*T_2               # Estad?stica F_0=(1/k)T2
+  F_tabla=qf(1-alfa,df1,df2)  # Valor cr?tico de la F o F-de la Tabla
+  valor_p=1-pf(F0,df1,df2)    # valor-p de la prueba
+  resultados<-data.frame(T2=T_2,k=k,F0=F0,
+                   df1=df1,df2=df2,F_Tabla=F_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", mu_0 )
+  format(resultados, digits = 6)
+}
+
+##########################################################
+#### Función creada para la prueba de igualdad de medias, 
+#### ie. para: mu_1-mu_2=mu_0, sigmas iguales, n-grande
+
+HT2_sigmas_iguales_ngrande=function(x,y,mu_0,alfa){
+  mux=apply(x,2,mean);muy=apply(y,2,mean)
+  sx<-var(x);sy<-var(y)
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  df=p      # Grados de libertad de la chi-cuadrado
+  sp<-( (n-1)*sx + (m-1)*sy )/(n+m-2)
+  chi_2<-( (n*m)/(n+m) )*t(mux-muy-mu_0)%*%solve(sp)%*%(mux-muy-mu_0)
+  chi_tabla=qchisq(1-alfa,df)  # Valor de la chi_cuadrado, ie. chi_Tabla
+  valor_p=1-pchisq(chi_2,df)    # valor-p de la prueba
+  resultados<-data.frame(Chi2=chi_2,df=df,
+                   Chi_Tabla=chi_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", mu_0 )
+  format(resultados, digits = 6)
+}
+
+
+###########################################################
+#### Función para PH de mu_x-mu_y=mu_0, sigmas diferentes 
+#### y desconocidas, Poba. Normal
+#### Aproximación de: Nel y Van Der Merwe (1986) 
+#### para el valro de v
+
+HT2_sigmas_diferentes=function(x,y,mu_0,alfa){
+  mux=apply(x,2,mean);muy=apply(y,2,mean)
+  sx<-var(x);sy<-var(y)
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  v1<-(1/n)*sx;v2<-(1/m)*sy
+  se<-v1+v2
+  v<-( sum(diag(se%*%se)) +
+         sum(diag(se))^2 )/( (1/(n-1))*(sum(diag(v1%*%v1)) +
+           sum(diag(v1))^2) +
+           ( 1/(m-1) )*(sum(diag(v2%*%v2)) +
+           sum(diag(v2))^2) )
+  v<-ceiling(v)
+  df1=p;df2<-v-p+1  # Grados de libertad de la F
+  sp<-( (n-1)*sx + (m-1)*sy )/(n+m-2)
+  T_2<-t(mux-muy-mu_0)%*%solve(se)%*%(mux-muy-mu_0)
+  k<-(v*p)/(v-p+1)
+  F0<-(1/k)*T_2
+  F_tabla=qf(1-alfa,df1,df2)
+  valor_p=1-pf(F0,df1,df2)
+  resultados=data.frame(T_2=T_2,v=v,k=k,F0=F0,
+                  df1=df1,df2=df2,F_Tabla=F_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", mu_0 )
+  format(resultados, digits = 6)
+}
+
+
+##########################################################
+#### Función para PH de mu_x-mu_y=mu_0, sigmas diferentes 
+#### y desconocidas, Poba. Normal
+#### Aproximación de Krishnamoorty and Yu (2004)
+#### texto-Guía con: p+p^2 en el numerador de v
+
+HT2_sigmas_diferentes_texto_guia=function(x,y,mu_0,alfa){
+  mux=apply(x,2,mean);muy=apply(y,2,mean)
+  sx<-var(x);sy<-var(y)
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  v1<-(1/n)*sx;v2<-(1/m)*sy
+  se<-v1+v2
+  numer<-p+(p^2)
+  den1<-sum( diag( (v1%*%solve(se))%*%(v1%*%solve(se)) ) )
+             + sum( ( diag( v1%*%solve(se) ) )^2 )
+  den2<-sum( diag( (v2%*%solve(se))%*%(v2%*%solve(se)) ) )
+             + sum( ( diag( v2%*%solve(se) ) )^2 )
+  v<-(numer)/( den1/n + den2/m )
+v<-ceiling(v)
+  df1=p;df2<-v-p+1  # Grados de libertad de la F
+  #sp<-( (n-1)*sx + (m-1)*sy )/(n+m-2)
+  T_2<-t(mux-muy-mu_0)%*%solve(se)%*%(mux-muy-mu_0)
+  k<-(v*p)/(v-p+1)
+  F0<-(1/k)*T_2
+  F_tabla=qf(1-alfa,df1,df2)
+  valor_p=1-pf(F0,df1,df2)
+  resultados=data.frame(T_2=T_2,v=v,k=k,F0=F0,
+                  df1=df1,df2=df2,F_Tabla=F_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", mu_0 )
+  format(resultados, digits = 6)
+}
+
+
+####################################################
+#### PH sobre el vector de medias Poblacional  #####
+####################################################
+
+####################################################
+#### Función para la PH de mu=mu_0-pob. Normal
+
+HT2_mu0=function(x,mu_0,alfa){
+  mu=apply(x,2,mean);s=var(x)
+#  mu <- as.vector(mu)
+  n=nrow(x);p=ncol(x)
+  df1=p;df2=n-p
+  T2<-n*t(mu-mu_0)%*%solve(s)%*%(mu-mu_0)
+  k<-( (n-1)*p )/(n-p)
+  F0<-(1/k)*T2
+  F_tabla=qf(1-alfa,df1,df2)
+  valor_p=1-pf(F0,df1,df2)
+  resultados=data.frame(T2=T2,K=k,F0=F0,df1=df1,df2=df2,
+                  F_Tabla=F_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", mu_0 )
+  format(resultados, digits = 6)
+}
+
+
+##################################################
+#### Función para la PH de mu=mu_0-n-grande
+
+HT2_mu0_ngrande=function(x,mu_0,alfa){
+  mu=apply(x,2,mean);s=var(x)
+  n=nrow(x);p=ncol(x)
+  df=p
+  chi_2<-n*t(mu-mu_0)%*%solve(s)%*%(mu-mu_0)
+  chi_tabla=qchisq(1-alfa,df)
+  valor_p=1-pchisq(chi_2,df)
+   resultados=data.frame(Chi_2=chi_2,df=df,Chi_Tabla=chi_tabla,
+                         Valor_p=valor_p)
+  format(resultados, digits = 6)
+}
+
+
+####################################################
+#######       PH sobre Constrastes    ##############
+####################################################
+
+#########################################################
+##### Función Creada para la PH de: CU=mu_0-Pob. Normal
+
+HT2_CU=function(x,C,delta_0,alfa){
+  mu=as.vector(apply(x,2,mean));s=var(x)
+  n=nrow(x);p=ncol(x)
+  k<-nrow(C)        ## n?mero de contrastes
+  df1=k
+  df2=n-k
+  T2<-n*t(C%*%mu-delta_0)%*%solve(C%*%s%*%t(C))%*%(C%*%mu-delta_0)
+  c<-( (n-1)*k )/(n-k)
+  F0<-(1/c)*T2
+  F_tabla=qf(1-alfa,df1,df2)
+  valor_p=1-pf(F0,df1,df2)
+  resultados=data.frame(T2=T2,c=c,F0=F0,df1=df1,df2=df2,
+                  F_Tabla=F_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", delta_0 )
+  format(resultados, digits = 6)
+}
+
+
+###########################################################
+#### Función Creada para la PH de: CU=mu_0,  n-Grande
+
+HT2_CU_ngrande=function(x,C,delta_0,alfa){
+  mu=as.vector(apply(x,2,mean));s=var(x)
+  n=nrow(x);p=ncol(x)
+  k<-nrow(C)
+  df1=k
+  chi2<-n*t(C%*%mu-delta_0)%*%solve(C%*%s%*%t(C))%*%(C%*%mu-delta_0)
+  chi_tabla=qchisq(1-alfa,df1)
+  valor_p=1-pchisq(chi2,df1)
+  resultados=data.frame(Chi2=chi2,df1=df1,
+                  Chi_Tabla=chi_tabla,Valor_p=valor_p)
+  cat("El vector mu0 es:", delta_0 )
+  format(resultados, digits = 6)
+}
+
+
+####################################################
+#### PH sobre Estructura de Covarianzas    #########
+####################################################
+
+########################################################
+#### Función para la PH de Razón de Ver. una Matriz de 
+#### Var-Cov: ie. Sigma=Sigma_0, n-grande
+
+sigma_sigma0_ngrande=function(x,Sigma_0,alfa){
+  x=as.matrix(x)
+  Sigma=as.matrix(Sigma_0)
+  p=ncol(x);n=nrow(x)
+  S=var(x)
+  ## Construcción del Estadístico de Prueba
+  mesa=S%*%solve(Sigma_0)
+  lamda_est= n*sum( diag(mesa) ) - n*log( det(S) ) +
+    n*log( det(Sigma_0) ) - n*p
+  df=0.5*p*(p+1)    ## grados de libertad de la chi-2
+  chi_tabla=qchisq(1-alfa,df)
+  valor_p=1-pchisq(lamda_est,df)
+  result=data.frame(Landa_est = lamda_est,df=df,
+              Chi_Tabla=chi_tabla,Valor_P=valor_p)
+  format(result, digits = 6)
+}
+
+
+###########################################################
+#### Función para la PH de Razón de Ver. una Matriz de 
+#### Var-Cov: ie. Sigma=Sigma_0, n-pequeña
+
+sigma_sigma0_npqna=function(x,Sigma_0,alfa){
+  x=as.matrix(x)
+  Sigma=as.matrix(Sigma_0)
+  p=ncol(x);n=nrow(x)
+  S=var(x)
+  ## Construcción del Estadístico de Prueba
+  mesa=S%*%solve(Sigma_0)
+  lamda_est= n*sum( diag(mesa) ) - n*log( det(S) ) +
+    n*log( det(Sigma_0) ) - n*p
+  c<-1- ( 1/( 6*(n-1) ) )*( 2*p+1-( 2/(p+1) ) )
+  lamda_1_est<-c*lamda_est
+  df=0.5*p*(p+1)
+  chi_tabla=qchisq(1-alfa,df)
+  valor_p=1-pchisq(lamda_1_est,df)
+  result=data.frame(Lamda1_est=lamda_1_est,c=c, df=df,
+              Chi_Tabla=chi_tabla,Valor_P=valor_p)
+  format(result, digits = 5)
+}
+
+
+####################################################
+#######           MUESTRAS PAREADAS   ##############
+####################################################
+
+
+#############################################################
+#### Función creada para la prueba de igualdad de medias, 
+#### ie. para: mu_1-mu_2=mu_0, muestras-pareadas, pob. Normal
+
+HT2_pareadas=function(x,y,alfa){
+  mux=apply(x,2,mean);muy=apply(y,2,mean)
+  sx<-var(x);sy<-var(y)
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  
+  x1 <- x[1:min(n,m),]
+  y1 <- y[1:min(n,m),]
+  datos_d <- x1-y1
+  mu=apply(datos_d,2,mean);s=var(datos_d)
+  n=nrow(datos_d);p=ncol(datos_d)
+  df1=p;df2=n-p
+  T2<-n*t(mu)%*%solve(s)%*%(mu)
+  k<-( (n-1)*p )/(n-p)
+  F0<-(1/k)*T2
+  F_tabla=qf(1-alfa,df1,df2)
+  valor_p=1-pf(F0,df1,df2)
+  resultados=data.frame(T2=T2,K=k,F0=F0,df1=df1,df2=df2,
+                        F_Tabla=F_tabla,Valor_p=valor_p)
+  format(resultados, digits = 6)
+}
+
+############################################################
+#### Función creada para la prueba de igualdad de medias, ie. 
+#### para: mu_1-mu_2=mu_0, muestras-pareadas, n-grande
+
+
+HT2_pareadas_ngrande=function(x,y,alfa){
+  mux=apply(x,2,mean);muy=apply(y,2,mean)
+  sx<-var(x);sy<-var(y)
+  n=nrow(x);m=nrow(y);p=ncol(x)
+  
+  x1 <- x[1:min(n,m),]
+  y1 <- y[1:min(n,m),]
+  datos_d <- x1-y1
+  mu=apply(datos_d,2,mean);s=var(datos_d)
+  
+  #  mu <- as.vector(mu)
+  n=nrow(datos_d);p=ncol(datos_d)
+  df=p
+  
+  chi_2<-n*t(mu)%*%solve(s)%*%(mu)
+  chi_tabla=qchisq(1-alfa,df)
+  valor_p=1-pchisq(chi_2,df)
+  resultados=data.frame(Chi_2=chi_2,df=df,Chi_Tabla=chi_tabla,
+                        Valor_p=valor_p)
+  format(resultados, digits = 6)
+}
+```
+
+<!-- Punto 1 -->
+
+# Punto 01
+
+Para el conjunto de datos asignado, realice los siguientes procesos de prueba de hipótesis (PH):
+
+\begin{itemize}
+    \item[a)] \[
+    \begin{cases}
+        H_0: \boldsymbol{\mu}_{6 \times 1} = \mathbf{0}_{6 \times 1} \\
+        H_a: \boldsymbol{\mu}_{6 \times 1} \neq \mathbf{0}_{6 \times 1}
+    \end{cases}
+    \]
+
+  \item[b)] \[
+    \begin{cases}
+        H_0: \boldsymbol{\Sigma}_{6 \times 6} = \mathbf{I}_{6 \times 6} \\
+        H_a: \boldsymbol{\Sigma}_{6 \times 6} \neq \mathbf{I}_{6 \times 6}
+    \end{cases}
+    \]
+
+  \item[c)] \[
+    \begin{cases}
+        H_0:
+        \begin{bmatrix}
+            \mu_1 \\ \mu_3 \\ \mu_5
+        \end{bmatrix}_{3 \times 1} =
+        \begin{bmatrix}
+            1 \\ 1 \\ 1
+        \end{bmatrix}_{3 \times 1} \\
+        H_a:
+        \begin{bmatrix}
+            \mu_1 \\ \mu_3 \\ \mu_5
+        \end{bmatrix}_{3 \times 1} \neq
+        \begin{bmatrix}
+            1 \\ 1 \\ 1
+        \end{bmatrix}_{3 \times 1}
+    \end{cases}
+    \]
+\end{itemize}
+
+```{r}
+#| echo: false
+library(MVN)
+library(kableExtra)
+library(tidyverse)
+library(readr)
+```
+
+## Solución Punto-01
+
+Para este punto se ultilizaron los datos del equipo 07.
+
+### Literal a)
+
+Primeramente verificaremos si la muestra de datos se distribuyen normal 6-variado por medio de la **Prueba de Mardia**.
+
+```{r}
+#| echo: false
+datos1 <- read.table("datos/Equipo_07_punto_01.txt", header = T)
+```
+
+
+
+```{r}
+#| label: tbl-mardia
+#| tbl-cap: "Prueba de Mardia"
+#| echo: false
+mvn(datos1, mvnTest = "mardia")$multivariateNormality %>% kable()
+```
+
+De la @tbl-mardia podemos concluir que los datos si se ditribuyen normal 6-variado.
+
+En esta literal nos piden probar la siguiente hipotesis
+
+$$
+\begin{cases}
+H_0: \underline{\mu} = \underline{\mu_0} \\ 
+H_a: \underline{\mu} \neq \underline{\mu_0}
+\end{cases}
+$$
+
+Dado que la muestra de datos se distribuye $\mathcal{N}_6(\underline{\mu},\boldsymbol{\Sigma})$, con $\underline{\mu}$-desconocida y $\boldsymbol{\Sigma}$-desconocida.
+
+El estadistico de prueba a utlilizar es el estadistico de prueba $T^2$ de Hostelling y esta dado por:
+
+$$
+T^2 = n (\bar{\boldsymbol{x}} - \mu_0)' S^{-1} (\bar{\boldsymbol{x}} - \mu_0)
+$$
+
+
+$$
+\text{Al nivel de significancia del } \alpha\%, \text{ rechazamos } H_0 : \mu = \mu_0, \text{ en favor de: } H_a : \mu \neq \mu_0, \text{ si el valor de:}
+$$
+
+$$
+T_0^2 = n(\overline{x} - \mu_0)^t \mathbf{S}^{-1}(\overline{x} - \mu_0) > kF = \frac{(n - 1)p}{n - p} F_{\alpha; p, n - p},
+$$
+
+$$
+\text{o equivalentemente, rechazamos } H_0 \text{ si:}
+$$
+
+$$
+F_0 = \frac{(n - p)}{(n - 1)p} T^2 = \frac{1}{k} T_0^2 > F_{\alpha; p, n - p},
+$$
+
+$$
+\text{en caso contrario no rechazamos } H_0.
+$$
+
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+# Punto 1a: Prueba de hipótesis H0: μ = 0
+mu0 <- rep(0, 6)
+res_mu0 <- HT2_mu0(datos1, mu0, 0.05)
+res_mu0 %>% kable()
+```
+
+
+Como p-valor = $0.419112 > 0.05$ =  $\alpha$, entonces **No se rechaza $H_0$**, es decir el vector de medias para la muestra es el vector nulo.
+
+
+
+### Literal b)
+
+Para este literal sabemos que la muestra de datos se distribuye $\mathcal{N}_6(\underline{\mu},\boldsymbol{\Sigma})$, con $\underline{\mu}$-desconocida y $\boldsymbol{\Sigma}$-desconocida.
+
+La hipotesis a probar es:
+
+$$
+\begin{cases}
+H_0: \boldsymbol{\Sigma}_{6\times 6} =  \boldsymbol{I}_6 \\ 
+H_a: \boldsymbol{\Sigma}_{6\times 6} \neq \boldsymbol{I}_6
+\end{cases}
+$$
+
+
+
+En este caso, es estadístico de prueba de Razón de Verosimilitud esta dado por:
+
+$$
+\lambda = \left[ \left( \frac{n-1}{n} \right)^p \frac{|S|}{|\Sigma_0|} \right]^{\frac{n}{2}} \exp \left\{ -\frac{1}{2} \left[ (n-1) \text{tr}(S \Sigma_0^{-1}) - np \right] \right\}
+$$
+
+
+
+$$
+\text{El cual se puede reescribir como:}
+$$
+
+$$
+\lambda = \frac{|S|^{\frac{v}{2}}}{|\Sigma_0|^{\frac{v}{2}}} \exp\left\{ -\frac{1}{2}\left[\text{tr}(S\Sigma_0^{-1}) - v p\right]\right\}, \quad \text{con: } v = n - 1 = n
+$$
+
+$$
+\text{y haciendo: } \lambda^* = -2\log\lambda \text{ se tiene que el Estadístico de prueba es:}
+$$
+
+$$
+\lambda^* = v\left[\log|\Sigma_0| - \log|S| + \text{tr}(S\Sigma_0^{-1}) - p\right] \overset{\text{Bajo }H_0}{\sim} \chi_k^2 \text{ para: } (n - 1) \text{ - Grande}
+$$
+
+$$
+\text{con: } k = \frac{p(p + 1)}{2} - p = \frac{p(p + 1)}{2}
+$$
+
+$$
+\text{Al nivel de significancia de } \alpha \text{ rechazamos } H_0 : \Sigma = \Sigma_0 \text{ en favor de: } H_a : \Sigma \neq \Sigma_0 \text{ si se cumple lo siguiente:}
+$$
+
+$$
+\lambda_0^* > \chi_{\alpha; k}^2
+$$
+
+$$
+\text{donde } \chi_{\alpha; k}^2 \text{ denota el percentil superior } \alpha \text{ de la distribución chi-cuadrado con k-grados de libertad.}
+$$
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si el valor-p es menor que } \alpha \text{, es decir si: valor}_p < \alpha.
+$$
+
+
+
+```{r}
+#| echo: false
+
+Sigma_0 <- diag(ncol(datos1))
+res_sigma0npqna <- sigma_sigma0_npqna(datos1,Sigma_0,0.05)
+kable(res_sigma0npqna, align = 'lcccc')
+```
+
+
+
+
+Como p-valor $\approx 0 < 0.05 = \alpha$ entonces, **se rechaza $H_0$**, es decir la matriz de varianzas y covarianzas de la muestra no es igual a la matriz identidad.
+
+<!-- Punto 2 -->
+
+### Literal c)
+
+Para este literal sabemos que la muestra de datos se distribuye $\mathcal{N}_6(\underline{\mu},\boldsymbol{\Sigma})$, con $\underline{\mu}$-desconocida y $\boldsymbol{\Sigma}$-desconocida.
+
+La hipotesis a probar es:
+
+$$
+\begin{cases}
+H_0: 
+\begin{bmatrix}
+\mu_1 \\
+\mu_3 \\
+\mu_5
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 \\
+1 \\
+1
+\end{bmatrix}
+\\[1em]
+H_a: 
+\begin{bmatrix}
+\mu_1 \\
+\mu_3 \\
+\mu_5
+\end{bmatrix}
+\neq
+\begin{bmatrix}
+1 \\
+1 \\
+1
+\end{bmatrix}
+\end{cases}
+$$
+
+El estadistico de prueba a utlilizar es el estadistico de prueba $T^2$ de Hostelling y esta dado por:
+
+$$
+T^2 = n (\bar{\boldsymbol{x}} - \mu_0)' S^{-1} (\bar{\boldsymbol{x}} - \mu_0)
+$$
+
+
+$$
+\text{Al nivel de significancia del } \alpha\%, \text{ rechazamos } H_0 : \mu = \mu_0, \text{ en favor de: } H_a : \mu \neq \mu_0, \text{ si el valor de:}
+$$
+
+$$
+T_0^2 = n(\overline{x} - \mu_0)^t \mathbf{S}^{-1}(\overline{x} - \mu_0) > kF = \frac{(n - 1)p}{n - p} F_{\alpha; p, n - p},
+$$
+
+$$
+\text{o equivalentemente, rechazamos } H_0 \text{ si:}
+$$
+
+$$
+F_0 = \frac{(n - p)}{(n - 1)p} T^2 = \frac{1}{k} T_0^2 > F_{\alpha; p, n - p},
+$$
+
+$$
+\text{en caso contrario no rechazamos } H_0.
+$$
+
+
+
+
+```{r}
+#| echo: false
+# Punto 1c: Prueba H0: [μ1, μ3, μ5] = [1, 1, 1]
+mu0_c <- c(1, 1, 1)
+res_mu0_c <- HT2_mu0(datos1[,c(1,3,5)], mu0_c, 0.05)
+res_mu0_c %>% kable(align = 'lcccccc')
+```
+
+Como el p-valor = $0.175741 > 0.05$ = $\alpha$, entonces **No se rechaza $H_0$**, es decir que la media para las variables 1, 3 y 5 es igual al vector $(1, 1, 1)'$.
+
+
+# Punto 02
+
+Para el conjunto de datos asignado, realice los siguientes procesos de PH:
+
+\begin{itemize}
+    \item[a)] \[
+    \begin{cases}
+        H_0: \boldsymbol{\mu}_{6 \times 1} = \mathbf{1}_{6 \times 1} \\
+        H_a: \boldsymbol{\mu}_{6 \times 1} \neq \mathbf{1}_{6 \times 1}
+    \end{cases}
+    \]
+
+  \item[b)] \[
+    \begin{cases}
+        H_0: \boldsymbol{\Sigma}_{6 \times 6} = 2 \mathbf{I}_{6 \times 6} \\
+        H_a: \boldsymbol{\Sigma}_{6 \times 6} \neq 2 \mathbf{I}_{6 \times 6}
+    \end{cases}
+    \]
+
+  \item[c)] \[
+    \begin{cases}
+        H_0:
+        \begin{bmatrix}
+            \mu_2 \\ \mu_4 \\ \mu_6
+        \end{bmatrix}_{3 \times 1} =
+        \begin{bmatrix}
+            2 \\ 2 \\ 2
+        \end{bmatrix}_{3 \times 1} \\
+        H_a:
+        \begin{bmatrix}
+            \mu_2 \\ \mu_4 \\ \mu_6
+        \end{bmatrix}_{3 \times 1} \neq
+        \begin{bmatrix}
+            2 \\ 2 \\ 2
+        \end{bmatrix}_{3 \times 1}
+    \end{cases}
+    \]
+\end{itemize}
+
+## Solución Punto 02
+
+Para este punto se ultilizaron los datos del equipo 07.
+
+```{r}
+#| echo: false
+datos2 <- read.table("datos/Equipo_07_punto_02.txt", header = T)
+```
+
+Primeramente verificaremos si la muestra de datos se distribuyen normal seis-variado por medio de la **Prueba de Royston**.
+
+```{r}
+#| echo: false
+mvn(datos2, mvnTest = "royston")$multivariateNormality %>% kable()
+```
+
+### Literal a)
+
+Teniendo en cuenta que el resultado de la **Prueba de Royston**, por tanto la muestra de datos se distribuye $\mathcal{N}_6(\underline{\mu},\boldsymbol{\Sigma})$, con $\underline{\mu}$-desconocida y $\boldsymbol{\Sigma}$-desconocida.
+
+La hipotesis a probar es:
+
+$$
+\begin{cases}
+H_0: \underline{\mu} = \underline{\mu_0} \\ 
+H_a: \underline{\mu} \neq \underline{\mu_0}
+\end{cases}, \quad con \quad  \underline{\mu_0}=\mathbf{1}_{6 \times 1}
+$$
+
+El estadistico de prueba a utlilizar es el estadistico de prueba $T^2$ de Hostelling y esta dado por:
+
+$$
+T^2 = n (\bar{\boldsymbol{x}} - \mu_0)' S^{-1} (\bar{\boldsymbol{x}} - \mu_0)
+$$
+
+
+$$
+\text{Al nivel de significancia del } \alpha\%, \text{ rechazamos } H_0 : \mu = \mu_0, \text{ en favor de: } H_a : \mu \neq \mu_0, \text{ si el valor de:}
+$$
+
+$$
+T_0^2 = n(\overline{x} - \mu_0)^t \mathbf{S}^{-1}(\overline{x} - \mu_0) > kF = \frac{(n - 1)p}{n - p} F_{\alpha; p, n - p},
+$$
+
+$$
+\text{o equivalentemente, rechazamos } H_0 \text{ si:}
+$$
+
+$$
+F_0 = \frac{(n - p)}{(n - 1)p} T^2 = \frac{1}{k} T_0^2 > F_{\alpha; p, n - p},
+$$
+
+$$
+\text{en caso contrario no rechazamos } H_0.
+$$
+
+
+
+```{r}
+#| echo: false
+# Punto 2a: Prueba de hipótesis H0: μ = 1
+mu0_2a <- rep(1, 6)
+res_mu0_2a <- HT2_mu0(datos2, mu0_2a, 0.05)
+res_mu0_2a %>% kable(align = 'ccccccc')
+```
+
+Como p-valor = $0.464322 > 0.05$ = $\alpha$, entonces No se rechaza $H_0$, es decir el vector de de medias asociado a la muestra de los datos es igual al vector de $(1,1,1,1,1,1)'$.
+
+### Literal b)
+
+
+
+
+Para este literal sabemos que la muestra de datos se distribuye $\mathcal{N}_6(\underline{\mu},\boldsymbol{\Sigma})$, con $\underline{\mu}$-desconocida y $\boldsymbol{\Sigma}$-desconocida.
+
+La hipotesis a probar es:
+
+$$
+\begin{cases}
+H_0: \boldsymbol{\Sigma}_{6\times 6} =  2\boldsymbol{I}_6 \\ 
+H_a: \boldsymbol{\Sigma}_{6\times 6} \neq 2\boldsymbol{I}_6
+\end{cases}
+$$
+
+
+
+En este caso, es estadístico de prueba de Razón de Verosimilitud esta dado por:
+
+$$
+\lambda = \left[ \left( \frac{n-1}{n} \right)^p \frac{|S|}{|\Sigma_0|} \right]^{\frac{n}{2}} \exp \left\{ -\frac{1}{2} \left[ (n-1) \text{tr}(S \Sigma_0^{-1}) - np \right] \right\}
+$$
+
+
+
+$$
+\text{El cual se puede reescribir como:}
+$$
+
+$$
+\lambda = \frac{|S|^{\frac{v}{2}}}{|\Sigma_0|^{\frac{v}{2}}} \exp\left\{ -\frac{1}{2}\left[\text{tr}(S\Sigma_0^{-1}) - v p\right]\right\}, \quad \text{con: } v = n - 1 = n
+$$
+
+$$
+\text{y haciendo: } \lambda^* = -2\log\lambda \text{ se tiene que el Estadístico de prueba es:}
+$$
+
+$$
+\lambda^* = v\left[\log|\Sigma_0| - \log|S| + \text{tr}(S\Sigma_0^{-1}) - p\right] \overset{\text{Bajo }H_0}{\sim} \chi_k^2 \text{ para: } (n - 1) \text{ - Grande}
+$$
+
+$$
+\text{con: } k = \frac{p(p + 1)}{2} - p = \frac{p(p + 1)}{2}
+$$
+
+$$
+\text{Al nivel de significancia de } \alpha \text{ rechazamos } H_0 : \Sigma = \Sigma_0 \text{ en favor de: } H_a : \Sigma \neq \Sigma_0 \text{ si se cumple lo siguiente:}
+$$
+
+$$
+\lambda_0^* > \chi_{\alpha; k}^2
+$$
+
+$$
+\text{donde } \chi_{\alpha; k}^2 \text{ denota el percentil superior } \alpha \text{ de la distribución chi-cuadrado con k-grados de libertad.}
+$$
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si el valor-p es menor que } \alpha \text{, es decir si: valor}_p < \alpha.
+$$
+
+
+
+```{r}
+#| echo: false
+
+Sigma0_2b <- 2*diag(ncol(datos2))
+sigma_sigma0_npqna(datos2,Sigma0_2b,0.05) %>% kable(align = 'lcccc')
+```
+
+
+Como p-valor $\approx 0 < 0.05$ = $\alpha$ entonces, **se rechaza $H_0$**, es decir la matriz de varianzas y covarianzas de la muestra de datos es diferente a 2 veces la matriz identidad.
+
+
+
+
+
+### Literal c)
+
+La hipotesis a probar es:
+
+$$
+\begin{cases}
+H_0: 
+\begin{bmatrix}
+\mu_2 \\
+\mu_4 \\
+\mu_6
+\end{bmatrix}
+=
+\begin{bmatrix}
+2 \\
+2 \\
+2
+\end{bmatrix}
+\\[1em]
+H_a: 
+\begin{bmatrix}
+\mu_2 \\
+\mu_4 \\
+\mu_6
+\end{bmatrix}
+\neq
+\begin{bmatrix}
+2 \\
+2 \\
+2
+\end{bmatrix}
+\end{cases}
+$$
+
+
+$$
+\text{En este caso, es estadístico de prueba es:}
+$$
+
+$$
+T^2 = \left( \overline{x} - \mu_0 \right)^t \left( \frac{1}{n}\mathbf{S} \right)^{-1} \left( \overline{x} - \mu_0 \right) = n(\overline{x} - \mu_0)^t \mathbf{S}^{-1}(\overline{x} - \mu_0)
+$$
+
+$$
+\text{Se utiliza el siguiente resultado:}
+$$
+
+$$
+T^2 \overset{\text{Bajo } H_0}{\sim} \frac{(n - 1)p}{n - p}F_{p,n-p} = kF, \quad \text{con: } k = \frac{(n - 1)p}{n - p}
+$$
+
+$$
+\text{o equivalentemente:}
+$$
+
+$$
+F = \frac{1}{k}T^2 = \frac{(n - p)}{(n - 1)p}T^2 \overset{\text{Bajo } H_0}{\sim} F_{p,n-p},
+$$
+
+$$
+\text{donde } F_{p,n-p} \text{ -denota una v.a con distribución F con p y (n-p) grados de libertad respectivamente.}
+$$
+
+$$
+\text{Al nivel de significancia de } \alpha \text{ rechazamos } H_0 : \mu = \mu_0 \text{ en favor de: } H_a : \mu \neq \mu_0 \text{ si se cumple lo siguiente:}
+$$
+
+$$
+T_0^2 = n(\overline{x} - \mu_0)^t \mathbf{S}^{-1}(\overline{x} - \mu_0) > kF = \frac{(n - 1)p}{n - p}F_{\alpha; p, n - p},
+$$
+
+
+donde $F_{\alpha; p,n-p}$ -denota el percentil superior $\alpha$ distribución F con p y (n-p) grados de libertad respectivamente.
+
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si:}
+$$
+
+$$
+F_0 = \frac{1}{k}T_0^2 = \frac{(n - p)}{(n - 1)p}T_0^2 > F_{\text{tabla}} = F_{\alpha; p, n - p}
+$$
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si el valor-p es menor que: } \alpha \text{ es decir si: valor}_p < \alpha.
+$$
+
+
+
+
+
+
+```{r}
+#| echo: false
+# Punto 2c: Prueba H0: [μ2, μ4, μ6] = [2, 2, 2]
+mu0_2c <- c(2, 2, 2)
+res_mu0_2c <- HT2_mu0(datos2[,c(2,4,6)], mu0_2c, 0.05)
+res_mu0_2c %>% kable(align = 'ccccccc')
+```
+
+
+
+
+Como p-valor = $0.00604357 < 0.05$ = $\alpha$, entonces, se rechaza $H_0$, es decir que la media para las variables 2, 4 y 6 no es igual al vector $(2,2,2)'$.
+
+# Punto 03
+
+Para el conjunto de datos asignado, realice los siguientes procesos de PH:
+
+\begin{itemize}
+    \item[a)] \[
+    \begin{cases}
+        H_0: \boldsymbol{\Sigma}_1 = \boldsymbol{\Sigma}_2 \\
+        H_a: \boldsymbol{\Sigma}_1 \neq \boldsymbol{\Sigma}_2
+    \end{cases}
+    \]
+
+  \item[b)] Asumiendo independencia entre las muestras:
+    \[
+    \begin{cases}
+        H_0: \boldsymbol{\mu}_1 = \boldsymbol{\mu}_2 \\
+        H_a: \boldsymbol{\mu}_1 \neq \boldsymbol{\mu}_2
+    \end{cases}
+    \]
+
+  \item[c)] Asumiendo no-independencia entre las muestras:
+    \[
+    \begin{cases}
+        H_0: \boldsymbol{\mu}_1 = \boldsymbol{\mu}_2 \\
+        H_a: \boldsymbol{\mu}_1 \neq \boldsymbol{\mu}_2
+    \end{cases}
+    \]
+\end{itemize}
+
+## Solución Punto 03
+
+Para este punto se ultilizaron los datos del equipo 07.
+
+```{r}
+#| echo: false
+
+
+# muestra 1
+datos3_1 <- read.table("datos/equipo_07_muestra1_punto_03.txt",
+                       header = T)
+# muestra 2
+datos3_2 <- read.table("datos/equipo_07_muestra2_punto_03.txt")
+```
+
+```{r}
+#| echo: false
+datos3_1 <- datos3_1 %>% mutate(Grupos=rep(1,26))
+datos3_2 <- datos3_2 %>% mutate(Grupos=rep(2,26))
+
+# uniendo las dos muestras
+datos3 <- bind_rows(datos3_1, datos3_2)
+
+write_csv(datos3, "datos_punto_03.csv")
+```
+
+Primeramente verifiquemos si las dos muestras provienen de una distribucion normal 3-variada por medio de la **Prueba de Royston**.
+
+```{r}
+#| label: tbl-royston31
+#| echo: false
+#| tbl-cap: Prueba de Royston para la Muestra 1
+mvn(datos3_1[,1:3], mvnTest = "royston")$multivariateNormality %>% 
+  kable(align = 'ccc')
+```
+
+De la @tbl-royston31 podemos concluir que los datos asoicados a la muestra 1 se ditribuyen normal 3-variado.
+
+```{r}
+#| label: tbl-royston32
+#| echo: false
+#| tbl-cap: Prueba de Royston para la Muestra 2
+mvn(datos3_2[,1:3], mvnTest = "royston")$multivariateNormality %>% 
+  kable(align = 'ccc')
+```
+
+De la @tbl-royston32 podemos concluir que los datos asoicados a la muestra 2 se ditribuyen normal 3-variado.
+
+### Literal a)
+
+Las hipotesis a probar son
+
+$$
+\begin{cases}
+H_0: \boldsymbol{\Sigma}_{1} =  \boldsymbol{\Sigma}_{2} \\ 
+H_a: \boldsymbol{\Sigma}_{1} \neq \boldsymbol{\Sigma}_2
+\end{cases}
+$$
+
+En este caso, es estadístico de prueba de Razón de Verosimilitud esta dado por:
+
+$$
+\lambda = \prod_{i=1}^{g} \left( \frac{\lvert S_i \rvert}{\lvert S_p \rvert} \right)^{\frac{n_i - 1}{2}}
+$$
+
+
+$$
+\text{donde } S_i \text{ es la matriz de Var-Cov muestral asociada a la m.a de la i-ésima población, para } i=1,2=g, \text{ y}
+$$
+
+$$
+\mathbf{S}_p = \hat{\Sigma} = \frac{1}{\sum_{i=1}^{g=2}(n_i - 1)} \left[ \sum_{i=1}^{g=2}(n_i - 1)\mathbf{S}_i \right] = \frac{(n - 1)\mathbf{S}_1 + (m - 1)\mathbf{S}_2}{n + m - 2}
+$$
+
+$$
+\text{es la matriz de var-cov ponderada.}
+$$
+
+$$
+\text{La \textbf{Estadística M de Box} se define como } M = -2\log\lambda \text{ y se puede escribir como sigue:}
+$$
+
+$$
+M = \left[ \sum_{i=1}^{g=2}(n_i - 1) \right]\log|\mathbf{S}_p| - \sum_{i=1}^{g=2}(n_i - 1)\log|\mathbf{S}_i| = v\log|\mathbf{S}_p| - \sum_{i=1}^{g=2} v_i\log|\mathbf{S}_i|
+$$
+
+$$
+\text{Se utiliza la siguiente aproximación:}
+$$
+
+$$
+C = (1 - u)M \xrightarrow{d} \chi_k^2
+$$
+
+$$
+\text{con:}
+$$
+
+$$
+u = \left[ \sum_{i=1}^{g=2}\left(\frac{1}{n_i - 1}\right) - \frac{1}{\sum_{i=1}^{g=2}(n_i - 1)}\right] \left( \frac{2p^2 + 3p - 1}{6(p + 1)(g - 1)} \right)
+$$
+
+$$
+= \left[ \sum_{i=1}^{g=2}\frac{1}{v_i} - \frac{1}{v} \right] \left( \frac{2p^2 + 3p - 1}{6(p + 1)(g - 1)} \right)
+$$
+
+$$
+\text{con: } k = \left[ gp + g\frac{1}{2}p(p + 1) \right] - \left[ gp + \frac{1}{2}p(p + 1) \right] = \frac{p(p + 1)(g - 1)}{2} \text{ - grados de libertad, } g=2
+$$
+
+$$
+\text{Al nivel de significancia de } \alpha \text{ rechazamos } H_0 : \Sigma_1 = \Sigma_2 \text{ en favor de: } H_a : \Sigma_1 \neq \Sigma_2 \text{ si se cumple lo siguiente:}
+$$
+
+$$
+C_0 > \chi_{\alpha; k}^2
+$$
+
+$$
+\text{donde } \chi_{\alpha; k} \text{ denota el percentil superior } \alpha \text{ de la distribución chi-cuadrado con k-grados de libertad.}
+$$
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si el valor-p es menor que: } \alpha \text{ es decir si: valor}_p < \alpha.
+$$
+
+
+
+```{r}
+#| echo: false
+x3_a <- datos3_1[,1:3]
+y3_a <- datos3_2[,1:3]
+res_box3_a <- prueba_M_Box2(x3_a,y3_a,0.05)
+kable(res_box3_a, align = 'cccccc')
+```
+
+Como p-valor = $0.611107 > 0.05$ = $\alpha$ entonces, No se rechaza $H_0$, es decir que la matriz de varianzas y covarianzas de la muestra 1 y 2 asociada a los datos son iguales.
+
+### Literal b)
+
+Teniendo en cuenta que las dos muestras se distribuyen normal 3-variada con vector de medias $\underline{\mu_1}$ y $\underline{\mu_2}$ desconocidos y $\boldsymbol{\Sigma}_{1} =  \boldsymbol{\Sigma}_{2} = \boldsymbol{\Sigma}$-Desconocida. Asumiendo que las dos muestras son independientes las hipótesis contrastar son:
+
+$$
+\begin{cases}
+H_0: \underline{\mu_1} -\underline{\mu_2} = \underline{\delta_0} \\
+H_a: \underline{\mu_1} - \underline{\mu_2} \neq \underline{\delta_0}
+\end{cases} , \quad con \quad \underline{\delta_0}=\underline{\mathbf{0}}
+$$
+
+En este caso, se usa como estimador de $\mathbf{\Sigma}$ a la matriz de varianzas-covarianzas ponderada dada por:
+
+$$
+S_p = \hat{\Sigma} = \frac{(n - 1)S_1 + (m - 1)S_2}{n + m - 2}
+$$
+
+En este caso el estadístico de prueba es:
+
+$$
+T_0^2 = \frac{nm}{n + m} \left( \overline{x} - \overline{y} - \delta_0 \right)^t S_p^{-1} \left( \overline{x} - \overline{y} - \delta_0 \right)
+\overset{\text{Bajo } H_0}{\sim} \frac{(n + m - 2)p}{n + m - p - 1} F_{p; n + m - p - 1} = kF
+$$
+
+$$
+\text{con: } k = \frac{(n + m - 2)p}{n + m - p - 1}
+$$
+
+Rechazamos $H_0$ si:
+
+$$
+T_0^2 > kF = \frac{(n + m - 2)p}{n + m - p - 1} F_{\alpha : p, n + m - p - 1}
+$$
+
+O equivalentemente, rechazamos \$H_0 \$ si:
+
+$$
+F_0 = \frac{n + m - p - 1}{(n + m - 2)p} T_0^2 = \frac{1}{k} T_0^2 > F_{\text{tabla}} = F_{\alpha : p, n + m - p - 1}
+$$
+
+O equivalentemente, rechazamos H0 si el valor-p es menor que: α es decir si: valorp \< α.
+
+```{r}
+#| echo: false
+x3_b <- datos3_1[,1:3]
+y3_b <- datos3_2[,1:3]
+mu_03_b <- c(0,0,0)
+res2p3_b <- HT2_sigmas_iguales(x3_b,y3_b,mu_03_b,0.05)
+kable(res2p3_b, align = 'ccccccc')
+```
+
+Como p-valor = $0.828051 > 0.05$ = $\alpha$ entonces, **No se rechaza $H_0$**, es decir el vector de medias para la muestra 1 y 2 son iguales.
+
+### Literal c)
+
+Teniendo en cuenta que las dos muestras se distribuyen normal 3-variada con vector de medias $\underline{\mu_1}$ y $\underline{\mu_2}$ desconocidos y $\boldsymbol{\Sigma}$-Desconocida. Asumiendo que las dos muestras **no** son independientes las hipótesis contrastar son:
+
+$$
+\begin{cases}
+H_0: \underline{\mu_1} -\underline{\mu_2} = \underline{\mathbf{0}}\\
+H_a: \underline{\mu_1} - \underline{\mu_2} \neq \underline{\mathbf{0}}
+\end{cases}
+$$
+
+y el estadístico de prueba es:
+
+$$
+T^2 = n\overline{D}^t S_D^{-1}\overline{D} \approx \frac{(n - 1)p}{n - p} F_{p, n - p}, \quad \text{donde:}
+$$
+
+$$
+\overline{D} = \frac{1}{n} \sum_{i=1}^{n} D_i
+\quad \text{y} \quad
+S_D = \frac{1}{n - 1} \sum_{i=1}^{n} (D_i - \overline{D})(D_i - \overline{D})^t,
+$$
+
+son el vector de medias y la matriz de Var-Cov de las diferencias muestrales.
+
+$$
+\text{Se rechaza } H_0 \text{ si:} \quad T_0^2 > \frac{(n - 1)p}{n - p} F_{\alpha; p, n - p}.
+$$
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si el valor-p es menor que: } \alpha \text{, es decir si: } \text{valor}_p < \alpha.
+$$
+
+
+
+```{r}
+#| echo: false
+x3_c <- datos3_1[,1:3]
+y3_c <- datos3_2[,1:3]
+HT2_pareadas(x3_b,y3_b,0.05) %>% kable(align = 'ccccccc')
+```
+
+
+Como el p-valor = $0.801211 > 0.05$ =  $\alpha$ entonces, **No se rechaza $H_0$**, es decir el vector de medias para la muestra 1 y 2 son iguales.
+
+
+# Punto 04
+
+Para el conjunto de datos asignado, realice los siguientes procesos de PH:
+
+\begin{itemize}
+    \item[a)] \[
+    \begin{cases}
+        H_0: \boldsymbol{\Sigma}_1 = \boldsymbol{\Sigma}_2 \\
+        H_a: \boldsymbol{\Sigma}_1 \neq \boldsymbol{\Sigma}_2
+    \end{cases}
+    \]
+
+  \item[b)] Asumiendo independencia entre las muestras:
+    \[
+    \begin{cases}
+        H_0: \boldsymbol{\mu}_1 = \boldsymbol{\mu}_2 \\
+        H_a: \boldsymbol{\mu}_1 \neq \boldsymbol{\mu}_2
+    \end{cases}
+    \]
+\end{itemize}
+
+
+
+
+
+## Solución Punto 04
+
+
+Para este punto se ultilizaron los datos del equipo 07.
+
+
+
+
+```{r}
+#| echo: false
+# muestra 1
+datos4_1 <- read.table("datos/equipo_07_muestra1_punto_04.txt",
+                       header = T)
+# muestra 2
+datos4_2 <- read.table("datos/equipo_07_muestra2_punto_04.txt")
+```
+
+
+
+```{r}
+#| echo: false
+datos4_1 <- datos4_1 %>% mutate(Grupos=rep(1,56))
+datos4_2 <- datos4_2 %>% mutate(Grupos=rep(2,56))
+
+# uniendo las dos muestras
+datos4 <- bind_rows(datos4_1, datos4_2)
+
+write_csv(datos4, "datos_punto_04.csv")
+```
+
+
+
+Primeramente verifiquemos si las dos muestras provienen de una distribucion normal 3-variada por medio de la **Prueba de Mardia**.
+
+
+
+```{r}
+#| label: tbl-mardia41
+#| echo: false
+#| tbl-cap: Prueba de Mardia para la Muestra 1
+mvn(datos4_1[,1:3], mvnTest = "mardia")$multivariateNormality %>% kable()
+```
+
+
+De la @tbl-mardia41 podemos concluir que los datos asoicados a la muestra 1 se ditribuyen normal 3-variado
+
+
+```{r}
+#| label: tbl-mardia42
+#| echo: false
+#| tbl-cap: Prueba de Mardia para la Muestra 2
+mvn(datos4_2[,1:3], mvnTest = "mardia")$multivariateNormality %>% kable()
+```
+
+
+De la @tbl-mardia42 podemos concluir que los datos asoicados a la muestra 2 se ditribuyen normal 3-variado
+
+
+
+
+
+### Literal a)
+
+
+Teniendo en cuenta que el resultado de la **Prueba de Mardia** para las dos muestras podemos decir que ambas muestras se distribuye $\mathcal{N}_3(\underline{\mu_i},\boldsymbol{\Sigma_i})$, para $i$=1,2 , con $\underline{\mu_1}$ y $\underline{\mu_2}$ desconocidos y $\boldsymbol{\Sigma}_{1}$ y $\boldsymbol{\Sigma}_{2}$ desconocidas.
+
+
+La hipótesis a probar es
+
+
+
+$$
+\begin{cases}
+H_0: \boldsymbol{\Sigma}_{1} =  \boldsymbol{\Sigma}_{2} \\ 
+H_a: \boldsymbol{\Sigma}_{1} \neq \boldsymbol{\Sigma}_2
+\end{cases}
+$$
+
+En este caso, es estadístico de prueba de Razón de Verosimilitud esta dado por:
+
+
+$$
+\lambda = \prod_{i=1}^{g} \left( \frac{\lvert S_i \rvert}{\lvert S_p \rvert} \right)^{\frac{n_i - 1}{2}}
+$$
+
+$$
+\text{donde } S_i \text{ es la matriz de Var-Cov muestral asociada a la m.a de la i-ésima población, para } i=1,2=g, \text{ y}
+$$
+
+$$
+\mathbf{S}_p = \hat{\Sigma} = \frac{1}{\sum_{i=1}^{g=2}(n_i - 1)} \left[ \sum_{i=1}^{g=2}(n_i - 1)\mathbf{S}_i \right] = \frac{(n - 1)\mathbf{S}_1 + (m - 1)\mathbf{S}_2}{n + m - 2}
+$$
+
+$$
+\text{es la matriz de var-cov ponderada.}
+$$
+
+$$
+\text{La \textbf{Estadística M de Box} se define como } M = -2\log\lambda \text{ y se puede escribir como sigue:}
+$$
+
+$$
+M = \left[ \sum_{i=1}^{g=2}(n_i - 1) \right]\log|\mathbf{S}_p| - \sum_{i=1}^{g=2}(n_i - 1)\log|\mathbf{S}_i| = v\log|\mathbf{S}_p| - \sum_{i=1}^{g=2} v_i\log|\mathbf{S}_i|
+$$
+
+$$
+\text{Se utiliza la siguiente aproximación:}
+$$
+
+$$
+C = (1 - u)M \xrightarrow{d} \chi_k^2
+$$
+
+$$
+\text{con:}
+$$
+
+$$
+u = \left[ \sum_{i=1}^{g=2}\left(\frac{1}{n_i - 1}\right) - \frac{1}{\sum_{i=1}^{g=2}(n_i - 1)}\right] \left( \frac{2p^2 + 3p - 1}{6(p + 1)(g - 1)} \right)
+$$
+
+$$
+= \left[ \sum_{i=1}^{g=2}\frac{1}{v_i} - \frac{1}{v} \right] \left( \frac{2p^2 + 3p - 1}{6(p + 1)(g - 1)} \right)
+$$
+
+$$
+\text{con: } k = \left[ gp + g\frac{1}{2}p(p + 1) \right] - \left[ gp + \frac{1}{2}p(p + 1) \right] = \frac{p(p + 1)(g - 1)}{2} \text{ - grados de libertad, } g=2
+$$
+
+$$
+\text{Al nivel de significancia de } \alpha \text{ rechazamos } H_0 : \Sigma_1 = \Sigma_2 \text{ en favor de: } H_a : \Sigma_1 \neq \Sigma_2 \text{ si se cumple lo siguiente:}
+$$
+
+$$
+C_0 > \chi_{\alpha; k}^2
+$$
+
+$$
+\text{donde } \chi_{\alpha; k} \text{ denota el percentil superior } \alpha \text{ de la distribución chi-cuadrado con k-grados de libertad.}
+$$
+
+$$
+\text{O equivalentemente, rechazamos } H_0 \text{ si el valor-p es menor que: } \alpha \text{ es decir si: valor}_p < \alpha.
+$$
+
+
+
+
+```{r}
+#| echo: false
+x4_a <- datos4_1[,1:3]
+y4_a <- datos4_2[,1:3]
+prueba_M_Box2(x4_a,y4_a,0.05) %>% kable(align = 'cccccc')
+```
+
+
+Como p-valor = $0.0446368 < 0.05$ =  $\alpha$ entonces, **se rechaza $H_0$**, es decir que la matriz de varianzas y covarianza de la muestra 1 y 2 asociadas a los datos son diferentes. 
+
+
+### Literal b)
+
+Asumiendo que las dos muestras son independientes y de la hipótesis anterior $\boldsymbol{\Sigma}_{1} \neq \boldsymbol{\Sigma}_{2}$, las hipótesis contrastar son:
+
+$$
+\begin{cases}
+H_0: \underline{\mu_1} -\underline{\mu_2} = \underline{\delta_0} \\
+H_a: \underline{\mu_1} - \underline{\mu_2} \neq \underline{\delta_0}
+\end{cases} , \quad con \quad \underline{\delta_0}=\underline{\mathbf{0}}
+$$
+
+En este caso el estadístico de prueba es:
+
+
+$$
+T^2 = \left( \overline{x} - \overline{y} - \delta_0 \right)^t 
+\left[ \frac{S_1}{n} + \frac{S_2}{m} \right]^{-1}
+\left( \overline{x} - \overline{y} - \delta_0 \right)
+\overset{\text{Bajo } H_0}{\sim} \frac{v p}{v - p + 1} F_{p; v - p + 1} = kF
+$$
+
+
+$$
+\text{con: } k = \frac{v p}{v - p + 1} \quad \text{y} \quad 
+v = \frac{\text{tr}(S_e) + [\text{tr}(S_e)]^2}{\sum_{i=1}^{2} \frac{1}{n_i - 1} \left\{ \text{tr}(V_i) + [\text{tr}(V_i)]^2 \right\}}
+$$
+
+$$
+V_i = \frac{S_i}{n_i} \quad \text{y} \quad S_e = V_1 + V_2 = \frac{S_1}{n} + \frac{S_2}{m}.
+$$
+
+
+$$
+\text{Rechazamos} \quad H_0 \quad \text{si:} \quad T_0^2 > kF \quad \text{ó} \quad F_0 = \frac{1}{k} T_0^2 > F_{\text{tabla}}
+$$
+
+
+
+
+
+
+
+```{r}
+#| echo: false
+x4_b <- datos4_1[,1:3]
+y4_b <- datos4_2[,1:3]
+mu_04_b <- c(0,0,0)
+HT2_sigmas_diferentes(x4_b,y4_b,mu_04_b,0.05) %>% kable()
+```
+
+Como p-valor = $0.324959 > 0.05$ =  $\alpha$ entonces, **No se rechaza $H_0$**, es decir los vectores de medias asociados a la muestra 1 y 2 de los datos son iguales.
+
+
+
+
+
+
+
+
+
+
+
+# Punto 05
+
+\begin{itemize}
+    \item[a)] Usando los datos asignados para el Punto 01, construya elipses de confianza del 90\% y del 95\% para el vector de medias poblacional:
+    \[
+    \begin{bmatrix} \mu_1 \\ \mu_2 \end{bmatrix}_{2 \times 1}
+    \]
+    a partir de los datos muestrales.
+
+  \item[b)] A partir de las regiones de confianza del inciso (a), determine la decisión sobre la siguiente PH:
+    \[
+    \begin{cases}
+        H_0:
+        \begin{bmatrix} \mu_1 \\ \mu_2 \end{bmatrix} =
+        \begin{bmatrix} 2.5 \\ 2.2 \end{bmatrix} \\
+        H_a:
+        \begin{bmatrix} \mu_1 \\ \mu_2 \end{bmatrix} \neq
+        \begin{bmatrix} 2.5 \\ 2.2 \end{bmatrix}
+    \end{cases}
+    \]
+
+  \item[c)] A partir de las regiones de confianza del inciso (a), determine la decisión sobre la siguiente PH:
+    \[
+    \begin{cases}
+        H_0:
+        \begin{bmatrix} \mu_1 \\ \mu_2 \end{bmatrix} =
+        \begin{bmatrix} 1.3 \\ 1.2 \end{bmatrix} \\
+        H_a:
+        \begin{bmatrix} \mu_1 \\ \mu_2 \end{bmatrix} \neq
+        \begin{bmatrix} 1.3 \\ 1.2 \end{bmatrix}
+    \end{cases}
+    \]
+\end{itemize}
+
+
+
+## Solución Punto 05
+
+
+
+
+
+```{r}
+#| label: fig-elipse
+#| fig-cap: "Elipses de confianza del 90% y 95% para el vector de medias con puntos $H_{01}$ y $H_{02}$"
+#| echo: false
+
+# Calcular el vector de medias y matriz de covarianzas
+mu_sub <- colMeans(datos1[, 1:2])
+S_sub <- cov(datos1[, 1:2])
+n <- nrow(datos1)
+
+# Construir elipses de confianza del 90% y 95%
+ggplot(data = datos1, aes(x = V1, y = V2)) +
+  geom_point(color = "blue") +
+  stat_ellipse(level = 0.90, color = "red", size = 1) +
+  stat_ellipse(level = 0.95, color = "green", size = 1) +
+  annotate("point", x = 2.5, y = 2.2, color = "purple", size = 3, shape = 17) +
+  annotate("point", x = 1.3, y = 1.2, color = "orange", size = 3, shape = 17)
+
+
+
+```
+
+
+Dado que los puntos purpura $\mu_0=(1.3, 1.2)'$ y naranjado $\mu_0=(1.3, 1.2)'$ se encuentran dentro de las regiones de confianza por tanto se apoyan estas hipótesis nulas
+
+
+\newpage
+
+# Conclusiones
+
+Los resultados obtenidos proporcionan información relevante sobre la estructura de medias y covarianzas del conjunto de datos analizado. La combinación de pruebas multivariadas y herramientas gráficas permite una interpretación más completa y detallada de la estructura subyacente de los datos.
